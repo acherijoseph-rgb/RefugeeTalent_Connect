@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   Briefcase,
+  Calendar,
   CheckCircle2,
   GraduationCap,
   LayoutDashboard,
@@ -33,6 +34,7 @@ type ActiveTab =
   | 'track1'
   | 'track2'
   | 'track3'
+  | 'mentorship'
   | 'funding'
   | 'impact'
   | 'admin'
@@ -192,9 +194,15 @@ function MainApp() {
         user.role === 'employer'
           ? 'Hiring & Matching'
           : user.role === 'mentor'
-            ? 'Mentorship & Jobs'
+            ? 'Jobs & Network'
             : 'Network & Jobs',
       icon: Briefcase,
+      roles: ['refugee', 'employer', 'mentor', 'administrator'],
+    },
+    {
+      id: 'mentorship',
+      label: 'Mentorship',
+      icon: Calendar,
       roles: ['refugee', 'employer', 'mentor', 'administrator'],
     },
     {
@@ -419,6 +427,9 @@ function MainApp() {
           {activeTab === 'track1' && <TrackOneCredentials onToast={showToast} />}
           {activeTab === 'track2' && <TrackTwoLegalFinancial onToast={showToast} />}
           {activeTab === 'track3' && <TrackThreeNetwork onToast={showToast} />}
+          {activeTab === 'mentorship' && (
+            <TrackThreeNetwork onToast={showToast} initialSubTab="mentorship" />
+          )}
           {activeTab === 'funding' && <FundingCoursesTab onToast={showToast} />}
           {activeTab === 'impact' && <SdgImpactTab />}
           {activeTab === 'admin' && user.role === 'administrator' && (

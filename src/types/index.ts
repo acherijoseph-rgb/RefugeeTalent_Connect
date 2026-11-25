@@ -98,6 +98,14 @@ export interface CountryGuidance {
   disclaimer: string;
 }
 
+export interface MentorWeeklySlotItem {
+  id: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  format: string;
+}
+
 export interface MentorProfileItem {
   profileId: number;
   userId: number;
@@ -112,7 +120,56 @@ export interface MentorProfileItem {
   availability: string;
   bio: string;
   isAcceptingMentees: boolean;
+  verifiedMentor: boolean;
+  timezone: string;
+  sessionDurationMinutes: number;
+  weeklyAvailability: MentorWeeklySlotItem[];
   isDemo?: boolean;
+}
+
+export interface MentorDaySlot {
+  startTime: string;
+  endTime: string;
+  format: string;
+  available: boolean;
+}
+
+export interface MentorAvailabilityResponse {
+  mentor: {
+    userId: number;
+    name: string;
+    verifiedMentor: boolean;
+    isAcceptingMentees: boolean;
+    timezone: string;
+    sessionDurationMinutes: number;
+  };
+  month: string;
+  today: string;
+  days: Record<string, MentorDaySlot[]>;
+}
+
+export interface MentorshipSessionItem {
+  id: number;
+  mentorUserId: number;
+  menteeUserId: number;
+  mentorName: string;
+  mentorTitle?: string;
+  mentorOrganization?: string;
+  mentorVerified?: boolean;
+  menteeName: string;
+  menteeHeadline?: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  timezone: string;
+  durationMinutes: number;
+  topic: string;
+  sessionFormat: string;
+  notes?: string;
+  meetingLink?: string;
+  status: 'Confirmed' | 'Completed' | 'Cancelled';
+  isDemo?: boolean;
+  createdAt: string;
 }
 
 export interface MentorshipRequestItem {

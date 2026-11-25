@@ -147,7 +147,12 @@ router.get('/dashboard-summary', requireAuth, async (req: AuthRequest, res: Resp
       db.select().from(mentorshipRequests).where(eq(mentorshipRequests.refugeeId, userId)).orderBy(desc(mentorshipRequests.createdAt)),
       db.select().from(jobApplications).where(eq(jobApplications.refugeeId, userId)).orderBy(desc(jobApplications.createdAt)),
       db.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1),
-      db.select().from(legalReadinessProgress).where(eq(legalReadinessProgress.userId, userId)).limit(1),
+      db
+        .select()
+        .from(legalReadinessProgress)
+        .where(eq(legalReadinessProgress.userId, userId))
+        .orderBy(desc(legalReadinessProgress.updatedAt))
+        .limit(1),
       db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(6),
       db.select().from(jobs).where(eq(jobs.status, 'Open')).orderBy(desc(jobs.createdAt)).limit(4),
       db.select().from(courses).orderBy(courses.id).limit(3),
@@ -171,7 +176,8 @@ router.get('/dashboard-summary', requireAuth, async (req: AuthRequest, res: Resp
 
     const verifiedCreds = myCreds.filter((c) => c.status === 'Verified by authorized reviewer').length;
     const passedAssessments = myAttempts.filter((a) => a.passed).length;
-    const completedLegalSteps = myReadiness[0]?.completedItemIds?.length || 0;
+    const workAuthItems = (myReadiness[0]?.completedItemIds || []).filter((id) => !id.startsWith('pay-'));
+    const completedLegalSteps = workAuthItems.length;
 
     res.json({
       profileCompletion,

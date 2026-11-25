@@ -251,7 +251,7 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
 
         <button
           type="button"
-          onClick={() => onNavigate('track3')}
+          onClick={() => onNavigate('mentorship')}
           className="text-left p-5 bg-white border border-slate-200 hover:border-blue-600 rounded-xl transition-colors space-y-2"
         >
           <div className="flex items-center justify-between">

@@ -10,6 +10,7 @@ import {
   fundingRequests,
   jobApplications,
   jobs,
+  mentorProfiles,
   mentorshipRequests,
   notifications,
   users,
@@ -121,6 +122,56 @@ router.patch('/employers/:id/verify', requireAuth, requireRole('administrator'),
   } catch (error) {
     console.error('Verify employer error:', error);
     res.status(500).json({ error: 'Failed to update employer verification status.' });
+  }
+});
+
+router.get('/mentors', requireAuth, requireRole('administrator'), async (_req: AuthRequest, res: Response) => {
+  try {
+    const rows = await db
+      .select({
+        id: mentorProfiles.id,
+        userId: mentorProfiles.userId,
+        name: users.name,
+        email: users.email,
+        organization: mentorProfiles.organization,
+        jobTitle: mentorProfiles.jobTitle,
+        industry: mentorProfiles.industry,
+        country: mentorProfiles.country,
+        timezone: mentorProfiles.timezone,
+        verifiedMentor: mentorProfiles.verifiedMentor,
+        isAcceptingMentees: mentorProfiles.isAcceptingMentees,
+        isDemo: mentorProfiles.isDemo,
+      })
+      .from(mentorProfiles)
+      .innerJoin(users, eq(mentorProfiles.userId, users.id))
+      .orderBy(desc(mentorProfiles.id));
+
+    res.json({ mentors: rows });
+  } catch (error) {
+    console.error('Admin list mentors error:', error);
+    res.status(500).json({ error: 'Failed to load mentor accounts.' });
+  }
+});
+
+router.patch('/mentors/:id/verify', requireAuth, requireRole('administrator'), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const verifiedMentor = Boolean(req.body?.verifiedMentor);
+
+    const updated = await db
+      .update(mentorProfiles)
+      .set({ verifiedMentor })
+      .where(eq(mentorProfiles.id, id))
+      .returning();
+
+    if (!updated[0]) {
+      return res.status(404).json({ error: 'Mentor profile not found.' });
+    }
+
+    res.json({ mentor: updated[0] });
+  } catch (error) {
+    console.error('Verify mentor error:', error);
+    res.status(500).json({ error: 'Failed to update mentor verification status.' });
   }
 });
 

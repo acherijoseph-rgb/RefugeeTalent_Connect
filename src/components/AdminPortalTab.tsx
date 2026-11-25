@@ -46,6 +46,21 @@ interface AdminEmployerRow {
   isDemo: boolean;
 }
 
+interface AdminMentorRow {
+  id: number;
+  userId: number;
+  name: string;
+  email: string;
+  organization: string;
+  jobTitle: string;
+  industry: string;
+  country: string;
+  timezone: string;
+  verifiedMentor: boolean;
+  isAcceptingMentees: boolean;
+  isDemo: boolean;
+}
+
 export function AdminPortalTab({ onToast }: AdminPortalProps) {
   const [section, setSection] = useState<
     'credentials' | 'funding' | 'users' | 'operations' | 'guidance'
@@ -55,6 +70,7 @@ export function AdminPortalTab({ onToast }: AdminPortalProps) {
   const [credentials, setCredentials] = useState<CredentialRecord[]>([]);
   const [funding, setFunding] = useState<FundingRequestItem[]>([]);
   const [employers, setEmployers] = useState<AdminEmployerRow[]>([]);
+  const [adminMentors, setAdminMentors] = useState<AdminMentorRow[]>([]);
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [mentorships, setMentorships] = useState<MentorshipRequestItem[]>([]);
   const [countries, setCountries] = useState<CountryGuidance[]>([]);
@@ -83,11 +99,12 @@ export function AdminPortalTab({ onToast }: AdminPortalProps) {
 
   const loadAll = async () => {
     try {
-      const [uRes, cRes, fRes, eRes, jRes, mRes, gRes] = await Promise.all([
+      const [uRes, cRes, fRes, eRes, amRes, jRes, mRes, gRes] = await Promise.all([
         apiFetch<{ users: AdminUserRow[] }>('/api/admin/users'),
         apiFetch<{ credentials: CredentialRecord[] }>('/api/credentials'),
         apiFetch<{ requests: FundingRequestItem[] }>('/api/funding-requests'),
         apiFetch<{ employers: AdminEmployerRow[] }>('/api/admin/employers'),
+        apiFetch<{ mentors: AdminMentorRow[] }>('/api/admin/mentors'),
         apiFetch<{ jobs: JobItem[] }>('/api/jobs'),
         apiFetch<{ requests: MentorshipRequestItem[] }>('/api/mentorship-requests'),
         apiFetch<{ countries: CountryGuidance[] }>('/api/guidance'),
@@ -96,6 +113,7 @@ export function AdminPortalTab({ onToast }: AdminPortalProps) {
       setCredentials(cRes.credentials);
       setFunding(fRes.requests);
       setEmployers(eRes.employers);
+      setAdminMentors(amRes.mentors);
       setJobs(jRes.jobs);
       setMentorships(mRes.requests);
       setCountries(gRes.countries);
@@ -176,6 +194,19 @@ export function AdminPortalTab({ onToast }: AdminPortalProps) {
       await loadAll();
     } catch (err: any) {
       onToast(err.message || 'Unable to update employer.', true);
+    }
+  };
+
+  const handleToggleMentorVerify = async (mentorId: number, nextState: boolean) => {
+    try {
+      await apiFetch(`/api/admin/mentors/${mentorId}/verify`, {
+        method: 'PATCH',
+        body: JSON.stringify({ verifiedMentor: nextState }),
+      });
+      onToast(nextState ? 'Mentor verified for 1-on-1 calendar booking.' : 'Mentor verification removed.');
+      await loadAll();
+    } catch (err: any) {
+      onToast(err.message || 'Unable to update mentor verification.', true);
     }
   };
 
@@ -571,6 +602,36 @@ export function AdminPortalTab({ onToast }: AdminPortalProps) {
                     }`}
                   >
                     {emp.verifiedPartner ? 'Verified Partner' : 'Approve Partner'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-blue-700" />
+              <span>Mentor Verification & Calendar Access</span>
+            </h2>
+            <div className="divide-y divide-slate-100">
+              {adminMentors.map((mentor) => (
+                <div key={mentor.id} className="py-3 flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">{mentor.name}</div>
+                    <div className="text-xs text-slate-600">
+                      {mentor.jobTitle} · {mentor.organization} · {mentor.country} ({mentor.timezone})
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleMentorVerify(mentor.id, !mentor.verifiedMentor)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md border whitespace-nowrap shrink-0 ${
+                      mentor.verifiedMentor
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        : 'bg-white border-slate-300 text-slate-700'
+                    }`}
+                  >
+                    {mentor.verifiedMentor ? 'Verified Mentor' : 'Verify Mentor'}
                   </button>
                 </div>
               ))}

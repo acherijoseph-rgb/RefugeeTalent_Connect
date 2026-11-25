@@ -271,24 +271,25 @@ export function LandingPage({ onOpenAuth, onExploreImpact }: LandingPageProps) {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-emerald-700">
-                      02. Track Two · SDG 10 & SDG 16
+                      02. Track Two · SDGs 8, 10 & 16
                     </div>
                     <h3 className="text-xl font-bold text-slate-900 mt-1">
                       Legal, Regulatory & Financial Access
                     </h3>
                     <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-                      Navigate country-specific work authorization checklists across Germany, the
-                      UK, Canada, the Netherlands, Sweden, and the US. Access official government
-                      portals, employer onboarding compliance guides, legal aid referrals, and
-                      basic bank account guidance.
+                      Remove administrative barriers so qualified candidates can legally work,
+                      receive payments, and participate in employment or contracting with confidence.
+                      Navigate work authorization checklists, employer compliance guides, banking
+                      resources, and digital payment onboarding across six host countries.
                     </p>
                   </div>
 
                   <div className="space-y-2.5 pt-2 border-t border-slate-100">
                     {[
-                      'Interactive work-permit readiness checklist',
-                      'Direct links to official national agencies',
-                      'Bridging course tuition & certification stipends',
+                      'Work authorization guidance & document checklists',
+                      'Employer compliance & onboarding support',
+                      'Banking access & digital payment-onboarding guidance',
+                      'Referrals to legal & financial support services',
                     ].map((item) => (
                       <div key={item} className="flex items-start gap-2.5 text-sm text-slate-700">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -298,8 +299,8 @@ export function LandingPage({ onOpenAuth, onExploreImpact }: LandingPageProps) {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                  <span>Informational guidance & support</span>
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs text-slate-600">
+                  <span>Informational guidance & referrals only</span>
                   <button
                     type="button"
                     onClick={() => onOpenAuth('register')}

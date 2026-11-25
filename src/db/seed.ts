@@ -1,4 +1,4 @@
-import { count } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { db } from './index.ts';
 import {
   assessmentAttempts,
@@ -12,6 +12,7 @@ import {
   legalReadinessProgress,
   mentorProfiles,
   mentorshipRequests,
+  mentorshipSessions,
   notifications,
   portfolios,
   skillsAssessments,
@@ -880,6 +881,14 @@ async function runSeed() {
         availability: '3 hours / week',
         bio: 'Mentoring displaced civil, mechanical, and software engineers through European credential recognition, technical portfolio reviews, and hiring introductions.',
         isAcceptingMentees: true,
+        verifiedMentor: true,
+        timezone: 'Europe/Berlin',
+        sessionDurationMinutes: 30,
+        weeklyAvailability: [
+          { id: 'slot-henrik-tue', dayOfWeek: 2, startTime: '10:00', endTime: '12:00', format: 'Video Call' },
+          { id: 'slot-henrik-thu', dayOfWeek: 4, startTime: '14:00', endTime: '16:30', format: 'Portfolio Review' },
+          { id: 'slot-henrik-fri', dayOfWeek: 5, startTime: '09:30', endTime: '11:00', format: 'Mock Interview' },
+        ],
         isDemo: true,
       },
     ]);
@@ -1221,5 +1230,183 @@ async function runSeed() {
         linkSection: 'track1',
       },
     ]);
+  }
+
+  await ensureMentorCalendarSeed();
+}
+
+function getNextDateForDayOfWeek(targetDay: number): string {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + 1); // Start from tomorrow
+  for (let i = 0; i < 14; i++) {
+    if (d.getUTCDay() === targetDay) {
+      return d.toISOString().slice(0, 10);
+    }
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+async function ensureMentorCalendarSeed() {
+  // 1. Ensure Dr. Henrik Weber has verifiedMentor=true & weeklyAvailability populated
+  const henrikUsers = await db
+    .select()
+    .from(users)
+    .where(eq(users.uid, 'demo-mentor-henrik'))
+    .limit(1);
+  const henrikUser = henrikUsers[0];
+  if (henrikUser) {
+    const henrikProfiles = await db
+      .select()
+      .from(mentorProfiles)
+      .where(eq(mentorProfiles.userId, henrikUser.id))
+      .limit(1);
+    if (henrikProfiles[0] && (!henrikProfiles[0].verifiedMentor || henrikProfiles[0].weeklyAvailability.length === 0)) {
+      await db
+        .update(mentorProfiles)
+        .set({
+          verifiedMentor: true,
+          timezone: henrikProfiles[0].timezone || 'Europe/Berlin',
+          sessionDurationMinutes: henrikProfiles[0].sessionDurationMinutes || 30,
+          weeklyAvailability:
+            henrikProfiles[0].weeklyAvailability.length > 0
+              ? henrikProfiles[0].weeklyAvailability
+              : [
+                  { id: 'slot-henrik-tue', dayOfWeek: 2, startTime: '10:00', endTime: '12:00', format: 'Video Call' },
+                  { id: 'slot-henrik-thu', dayOfWeek: 4, startTime: '14:00', endTime: '16:30', format: 'Portfolio Review' },
+                  { id: 'slot-henrik-fri', dayOfWeek: 5, startTime: '09:30', endTime: '11:00', format: 'Mock Interview' },
+                ],
+        })
+        .where(eq(mentorProfiles.id, henrikProfiles[0].id));
+    }
+  }
+
+  // 2. Ensure second verified demo mentor (Priya Nair) exists
+  const priyaExisting = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.uid, 'demo-mentor-priya'))
+    .limit(1);
+  if (!priyaExisting[0]) {
+    const insertedPriya = await db
+      .insert(users)
+      .values({
+        uid: 'demo-mentor-priya',
+        email: 'priya.nair@demo.refugeetalent.org',
+        name: 'Priya Nair',
+        role: 'mentor',
+        headline: 'VP of Platform Engineering · Verified Tech Career Mentor',
+        bio: 'Advising displaced software engineers, cloud architects, and data analysts on UK/European technical hiring loops and system design interviews.',
+        countryOfOrigin: 'India',
+        hostCountry: 'United Kingdom',
+        location: 'London, United Kingdom',
+        skills: ['System Design', 'TypeScript', 'Cloud Architecture', 'Technical Interviews'],
+        experienceYears: 14,
+        avatarUrl: '/src/assets/images/avatar_sample_mentor_1795593657105.jpg',
+        consentForEmployerMatching: false,
+        isDemo: true,
+      })
+      .returning();
+    if (insertedPriya[0]) {
+      await db.insert(mentorProfiles).values({
+        userId: insertedPriya[0].id,
+        organization: 'Thames Cloud Systems Ltd',
+        jobTitle: 'VP of Platform Engineering',
+        industry: 'Software & Cloud',
+        country: 'United Kingdom',
+        expertiseAreas: ['System Design Prep', 'UK Tech CV Review', 'Engineering Leadership', 'Remote Job Search'],
+        languages: ['English', 'Hindi'],
+        availability: '4 hours / week',
+        bio: 'Offering structured 1-on-1 mock interviews, GitHub/portfolio walkthroughs, and UK right-to-work hiring guidance for displaced technologists.',
+        isAcceptingMentees: true,
+        verifiedMentor: true,
+        timezone: 'Europe/London',
+        sessionDurationMinutes: 30,
+        weeklyAvailability: [
+          { id: 'slot-priya-mon', dayOfWeek: 1, startTime: '13:00', endTime: '15:00', format: 'Mock Interview' },
+          { id: 'slot-priya-wed', dayOfWeek: 3, startTime: '10:00', endTime: '12:00', format: 'Portfolio Review' },
+          { id: 'slot-priya-fri', dayOfWeek: 5, startTime: '15:00', endTime: '16:30', format: 'Video Call' },
+        ],
+        isDemo: true,
+      });
+    }
+  }
+
+  // 3. Ensure third verified demo mentor (Dr. Sofia Lindholm) exists
+  const sofiaExisting = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.uid, 'demo-mentor-sofia'))
+    .limit(1);
+  if (!sofiaExisting[0]) {
+    const insertedSofia = await db
+      .insert(users)
+      .values({
+        uid: 'demo-mentor-sofia',
+        email: 'sofia.lindholm@demo.refugeetalent.org',
+        name: 'Dr. Sofia Lindholm',
+        role: 'mentor',
+        headline: 'Clinical Integration Director · Healthcare Licensing Mentor',
+        bio: 'Supporting internationally trained physicians, nurses, and allied health professionals through European medical licensing and hospital onboarding.',
+        countryOfOrigin: 'Netherlands',
+        hostCountry: 'Netherlands',
+        location: 'Amsterdam, Netherlands',
+        skills: ['Medical Licensing', 'BIG Registration', 'Clinical Communication', 'Healthcare Compliance'],
+        experienceYears: 16,
+        consentForEmployerMatching: false,
+        isDemo: true,
+      })
+      .returning();
+    if (insertedSofia[0]) {
+      await db.insert(mentorProfiles).values({
+        userId: insertedSofia[0].id,
+        organization: 'Amsterdam Academic Medical Bridge',
+        jobTitle: 'Clinical Integration Director',
+        industry: 'Healthcare & Life Sciences',
+        country: 'Netherlands',
+        expertiseAreas: ['Medical Credential Equivalency', 'Clinical Language Prep', 'Hospital Onboarding', 'BIG / Approbation'],
+        languages: ['English', 'Dutch', 'German'],
+        availability: '2.5 hours / week',
+        bio: 'Guiding refugee clinicians step-by-step through documentation equivalency, language milestones, and supervised hospital placements.',
+        isAcceptingMentees: true,
+        verifiedMentor: true,
+        timezone: 'Europe/Amsterdam',
+        sessionDurationMinutes: 45,
+        weeklyAvailability: [
+          { id: 'slot-sofia-mon', dayOfWeek: 1, startTime: '16:00', endTime: '18:15', format: 'Video Call' },
+          { id: 'slot-sofia-wed', dayOfWeek: 3, startTime: '14:00', endTime: '16:15', format: 'Portfolio Review' },
+        ],
+        isDemo: true,
+      });
+    }
+  }
+
+  // 4. Seed one upcoming confirmed sample session for Layla with Dr. Henrik Weber if none exist
+  const existingSessions = await db.select({ value: count() }).from(mentorshipSessions);
+  if (Number(existingSessions[0]?.value ?? 0) === 0 && henrikUser) {
+    const laylaUsers = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.uid, 'demo-refugee-layla'), eq(users.isDemo, true)))
+      .limit(1);
+    if (laylaUsers[0]) {
+      const nextThu = getNextDateForDayOfWeek(4);
+      await db.insert(mentorshipSessions).values({
+        mentorUserId: henrikUser.id,
+        menteeUserId: laylaUsers[0].id,
+        sessionDate: nextThu,
+        startTime: '14:00',
+        endTime: '14:30',
+        timezone: 'Europe/Berlin',
+        durationMinutes: 30,
+        topic: 'DIN EN 1992 Structural Portfolio Walkthrough',
+        sessionFormat: 'Portfolio Review',
+        notes: 'Reviewing 2 bridge rehabilitation drawings and preparing ZAB equivalency notes.',
+        meetingLink: 'https://meet.refugeetalent.example/session-henrik-layla',
+        status: 'Confirmed',
+        isDemo: true,
+      });
+    }
   }
 }

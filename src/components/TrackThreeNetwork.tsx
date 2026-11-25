@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Briefcase,
   Building,
+  Calendar,
   CheckCircle2,
   Download,
   FileText,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, downloadAuthorizedFile, uploadDocumentFile } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { MentorshipCalendarPanel } from './MentorshipCalendarPanel';
 import type {
   JobApplicationItem,
   JobItem,
@@ -27,6 +29,7 @@ import type {
 
 interface TrackThreeProps {
   onToast: (msg: string, isError?: boolean) => void;
+  initialSubTab?: 'jobs' | 'mentorship' | 'portfolio' | 'matching';
 }
 
 interface MatchingCandidate {
@@ -46,15 +49,21 @@ interface MatchingCandidate {
   isDemo?: boolean;
 }
 
-export function TrackThreeNetwork({ onToast }: TrackThreeProps) {
+export function TrackThreeNetwork({ onToast, initialSubTab }: TrackThreeProps) {
   const { user } = useAuth();
   const isEmployer = user?.role === 'employer';
   const isMentor = user?.role === 'mentor';
   const isAdmin = user?.role === 'administrator';
 
   const [subTab, setSubTab] = useState<'jobs' | 'mentorship' | 'portfolio' | 'matching'>(
-    isEmployer ? 'matching' : isMentor ? 'mentorship' : 'jobs'
+    initialSubTab || (isEmployer ? 'matching' : isMentor ? 'mentorship' : 'jobs')
   );
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   // Jobs State
   const [jobs, setJobs] = useState<JobItem[]>([]);
@@ -81,7 +90,9 @@ export function TrackThreeNetwork({ onToast }: TrackThreeProps) {
   const [mentors, setMentors] = useState<MentorProfileItem[]>([]);
   const [mentorshipReqs, setMentorshipReqs] = useState<MentorshipRequestItem[]>([]);
   const [mentorSearch, setMentorSearch] = useState('');
+  const [verifiedMentorsOnly, setVerifiedMentorsOnly] = useState(true);
   const [selectedMentor, setSelectedMentor] = useState<MentorProfileItem | null>(null);
+  const [bookingMentor, setBookingMentor] = useState<MentorProfileItem | null>(null);
   const [mTopic, setMTopic] = useState('');
   const [mGoals, setMGoals] = useState('');
   const [mMessage, setMMessage] = useState('');
@@ -323,6 +334,7 @@ export function TrackThreeNetwork({ onToast }: TrackThreeProps) {
   };
 
   const filteredMentors = mentors.filter((m) => {
+    if (verifiedMentorsOnly && !m.verifiedMentor) return false;
     if (!mentorSearch.trim()) return true;
     const q = mentorSearch.toLowerCase();
     return (
@@ -714,65 +726,120 @@ export function TrackThreeNetwork({ onToast }: TrackThreeProps) {
 
       {/* MENTORSHIP TAB */}
       {subTab === 'mentorship' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 space-y-4">
-            <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3">
-              <Search className="w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={mentorSearch}
-                onChange={(e) => setMentorSearch(e.target.value)}
-                placeholder="Filter mentors by expertise, industry, or country..."
-                className="flex-1 text-sm focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-4">
-              {filteredMentors.map((m) => (
-                <div key={m.profileId} className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={m.avatarUrl || '/src/assets/images/avatar_sample_mentor_1795593657105.jpg'}
-                        alt={m.name}
-                        referrerPolicy="no-referrer"
-                        className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
-                      />
-                      <div>
-                        <div className="text-sm font-bold text-slate-900">
-                          {m.name}
-                          {m.isDemo && <span className="ml-2 text-xs font-normal text-slate-500">(Sample Demo)</span>}
-                        </div>
-                        <div className="text-xs text-slate-600">
-                          {m.jobTitle} · {m.organization}
-                        </div>
-                        <div className="text-[11px] text-emerald-700 mt-0.5">
-                          {m.country} · {m.availability} · Languages: {m.languages.join(', ')}
-                        </div>
-                      </div>
-                    </div>
-
-                    {user?.role === 'refugee' && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMentor(m)}
-                        className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg whitespace-nowrap shrink-0"
-                      >
-                        Request Mentorship
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="text-sm text-slate-700 leading-relaxed">{m.bio}</p>
-                  <div className="text-xs text-slate-500">
-                    Expertise: {m.expertiseAreas.join(' · ')}
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className="space-y-6">
+          <div id="mentorship-calendar">
+            <MentorshipCalendarPanel
+              mentors={mentors}
+              selectedMentorForBooking={bookingMentor}
+              onSelectMentorForBooking={setBookingMentor}
+              onToast={onToast}
+              onRefreshMentors={loadAll}
+            />
           </div>
 
-          <div className="lg:col-span-5 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-7 space-y-4">
+              <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="relative flex-1 flex items-center gap-2">
+                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={mentorSearch}
+                    onChange={(e) => setMentorSearch(e.target.value)}
+                    placeholder="Filter mentors by expertise, industry, or country..."
+                    className="flex-1 text-sm focus:outline-none"
+                  />
+                </div>
+                <label className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-200 rounded-lg cursor-pointer whitespace-nowrap shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={verifiedMentorsOnly}
+                    onChange={(e) => setVerifiedMentorsOnly(e.target.checked)}
+                    className="rounded text-blue-700"
+                  />
+                  <span>Verified Mentors Only</span>
+                </label>
+              </div>
+
+              <div className="space-y-4">
+                {filteredMentors.length === 0 ? (
+                  <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-xs text-slate-500">
+                    No mentors match the current filter.
+                  </div>
+                ) : (
+                  filteredMentors.map((m) => (
+                    <div key={m.profileId} className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={m.avatarUrl || '/src/assets/images/avatar_sample_mentor_1795593657105.jpg'}
+                            alt={m.name}
+                            referrerPolicy="no-referrer"
+                            className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
+                          />
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-bold text-slate-900">{m.name}</span>
+                              {m.verifiedMentor && (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  <span>Verified Mentor</span>
+                                </span>
+                              )}
+                              {m.isDemo && (
+                                <span className="text-xs font-normal text-slate-500">
+                                  · Sample Demo
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-600">
+                              {m.jobTitle} · {m.organization}
+                            </div>
+                            <div className="text-[11px] text-emerald-700 mt-0.5">
+                              {m.country} · {m.availability} · {m.timezone} · Languages: {m.languages.join(', ')}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          {m.verifiedMentor && m.isAcceptingMentees && m.userId !== user?.id && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBookingMentor(m);
+                                document
+                                  .getElementById('mentorship-calendar')
+                                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }}
+                              className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                            >
+                              <Calendar className="w-3.5 h-3.5" />
+                              <span>Book 1-on-1</span>
+                            </button>
+                          )}
+                          {user?.role === 'refugee' && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedMentor(m)}
+                              className="px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg whitespace-nowrap shrink-0"
+                            >
+                              Send Request
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-slate-700 leading-relaxed">{m.bio}</p>
+                      <div className="text-xs text-slate-500">
+                        Expertise: {m.expertiseAreas.join(' · ')}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 space-y-6">
             {selectedMentor && (
               <form
                 onSubmit={handleRequestMentorship}
@@ -949,6 +1016,7 @@ export function TrackThreeNetwork({ onToast }: TrackThreeProps) {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
       )}

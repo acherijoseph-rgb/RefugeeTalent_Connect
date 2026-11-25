@@ -161,6 +161,14 @@ export const legalReadinessProgress = pgTable('legal_readiness_progress', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export interface MentorWeeklySlot {
+  id: string;
+  dayOfWeek: number; // 0 (Sunday) - 6 (Saturday)
+  startTime: string; // HH:MM (24h)
+  endTime: string;   // HH:MM (24h)
+  format: string;    // Video Call | Portfolio Review | Mock Interview
+}
+
 export const mentorProfiles = pgTable('mentor_profiles', {
   id: serial('id').primaryKey(),
   userId: integer('user_id')
@@ -176,6 +184,10 @@ export const mentorProfiles = pgTable('mentor_profiles', {
   availability: text('availability').default('2 hours / week').notNull(),
   bio: text('bio').notNull(),
   isAcceptingMentees: boolean('is_accepting_mentees').default(true).notNull(),
+  verifiedMentor: boolean('verified_mentor').default(false).notNull(),
+  timezone: text('timezone').default('Europe/Berlin').notNull(),
+  sessionDurationMinutes: integer('session_duration_minutes').default(30).notNull(),
+  weeklyAvailability: jsonb('weekly_availability').$type<MentorWeeklySlot[]>().default([]).notNull(),
   isDemo: boolean('is_demo').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -193,6 +205,29 @@ export const mentorshipRequests = pgTable('mentorship_requests', {
   message: text('message').notNull(),
   status: text('status').notNull().default('Pending'), // Pending | Accepted | Declined | Completed
   mentorResponse: text('mentor_response').default(''),
+  isDemo: boolean('is_demo').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const mentorshipSessions = pgTable('mentorship_sessions', {
+  id: serial('id').primaryKey(),
+  mentorUserId: integer('mentor_user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  menteeUserId: integer('mentee_user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  sessionDate: text('session_date').notNull(), // YYYY-MM-DD
+  startTime: text('start_time').notNull(),     // HH:MM (mentor timezone)
+  endTime: text('end_time').notNull(),         // HH:MM
+  timezone: text('timezone').default('Europe/Berlin').notNull(),
+  durationMinutes: integer('duration_minutes').default(30).notNull(),
+  topic: text('topic').notNull(),
+  sessionFormat: text('session_format').default('Video Call').notNull(),
+  notes: text('notes').default(''),
+  meetingLink: text('meeting_link').default(''),
+  status: text('status').notNull().default('Confirmed'), // Confirmed | Completed | Cancelled
   isDemo: boolean('is_demo').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

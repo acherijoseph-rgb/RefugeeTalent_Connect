@@ -91,6 +91,19 @@ router.put('/:countryCode', requireAuth, requireRole('administrator'), async (re
   }
 });
 
+router.get('/readiness', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const rows = await db
+      .select()
+      .from(legalReadinessProgress)
+      .where(eq(legalReadinessProgress.userId, req.currentUser!.id));
+    res.json({ progressList: rows });
+  } catch (error) {
+    console.error('List legal readiness error:', error);
+    res.status(500).json({ error: 'Failed to load readiness progress.' });
+  }
+});
+
 router.get('/readiness/:countryCode', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const countryCode = String(req.params.countryCode || 'DE').toUpperCase();
@@ -110,6 +123,7 @@ router.get('/readiness/:countryCode', requireAuth, async (req: AuthRequest, res:
         countryCode,
         completedItemIds: [],
         notes: '',
+        updatedAt: null,
       },
     });
   } catch (error) {
@@ -121,9 +135,10 @@ router.get('/readiness/:countryCode', requireAuth, async (req: AuthRequest, res:
 router.put('/readiness/:countryCode', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const countryCode = String(req.params.countryCode || 'DE').toUpperCase();
-    const completedItemIds = Array.isArray(req.body?.completedItemIds)
-      ? req.body.completedItemIds.map((x: unknown) => String(x))
+    const rawIds = Array.isArray(req.body?.completedItemIds)
+      ? req.body.completedItemIds.map((x: unknown) => String(x).trim()).filter(Boolean)
       : [];
+    const completedItemIds = Array.from(new Set<string>(rawIds)).slice(0, 50);
     const notes = String(req.body?.notes || '').trim();
 
     const existing = await db
