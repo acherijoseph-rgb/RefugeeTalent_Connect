@@ -1,0 +1,6 @@
+{
+  "name": "RefugeeTalent Connect",
+  "description": "Your Skills. Your Future. Your Opportunity. A skilled refugee inclusion platform connecting credential recognition, legal and financial access, mentorship, and employer matching aligned with UN SDGs 4, 8, 10, 16, and 17.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
